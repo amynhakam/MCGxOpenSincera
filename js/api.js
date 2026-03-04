@@ -4,6 +4,9 @@
  */
 
 const API = {
+    // CORS proxy to bypass browser restrictions (free service)
+    corsProxy: 'https://corsproxy.io/?',
+    
     /**
      * Make an authenticated API request
      * @param {string} endpoint - API endpoint
@@ -12,7 +15,7 @@ const API = {
      */
     async request(endpoint, params = {}) {
         // Build URL string directly (works with relative paths)
-        let url = `${CONFIG.api.baseUrl}${endpoint}`;
+        let apiUrl = `${CONFIG.api.baseUrl}${endpoint}`;
         
         // Add query parameters
         const queryParams = Object.keys(params)
@@ -21,10 +24,13 @@ const API = {
             .join('&');
         
         if (queryParams) {
-            url += `?${queryParams}`;
+            apiUrl += `?${queryParams}`;
         }
         
-        console.log('API Request:', url);
+        // Use CORS proxy to wrap the request
+        const url = this.corsProxy + encodeURIComponent(apiUrl);
+        
+        console.log('API Request:', apiUrl);
         
         try {
             const headers = {
