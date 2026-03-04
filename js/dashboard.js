@@ -427,7 +427,8 @@ const Dashboard = {
         // For some metrics, lower is better
         const lowerIsBetter = ['avg_page_weight', 'avg_cpu'].includes(metricKey);
         const diff = ((value - benchmark) / benchmark * 100).toFixed(1);
-        const isPositive = lowerIsBetter ? value < benchmark : value > benchmark;
+        const isLower = value < benchmark;
+        const isGood = lowerIsBetter ? isLower : !isLower;
         
         if (Math.abs(diff) < 5) {
             return {
@@ -436,8 +437,8 @@ const Dashboard = {
         }
         
         return {
-            html: `<span class="metric-trend ${isPositive ? 'positive' : 'negative'}">
-                ${isPositive ? '↑' : '↓'} ${Math.abs(diff)}% vs avg
+            html: `<span class="metric-trend ${isGood ? 'positive' : 'negative'}">
+                ${isLower ? '↓' : '↑'} ${Math.abs(diff)}% vs avg
             </span>`
         };
     },
