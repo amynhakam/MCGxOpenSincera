@@ -113,11 +113,13 @@ const Dashboard = {
      */
     renderMediaTypeStats() {
         const ecosystem = this.data?.ecosystem;
+        const publisher = this.data?.publisher;
         const statsEl = document.getElementById('mediaTypeStats');
         if (!statsEl || !ecosystem?.pbjs_ad_unit_media_types) return;
         
         const mediaTypes = ecosystem.pbjs_ad_unit_media_types;
         const selected = this.selectedMediaType;
+        const publisherName = publisher?.name || 'Publisher 34732';
         
         // Filter out technical types for total calculation
         const technicalTypes = ['pos', 'write', 'bidders', 'writeln', 'ortb2Imp', 'platform', 'nativeTheme', 'querySelector', 'getElementById', 'getElementsByTagName'];
@@ -128,33 +130,33 @@ const Dashboard = {
         const total = primaryTypes.reduce((sum, e) => sum + e.count, 0);
         
         if (selected === 'all') {
-            // Show summary of top 3 media types
+            // Show summary - metrics below are for publisher 34732
             const top3 = primaryTypes.sort((a, b) => b.count - a.count).slice(0, 3);
             statsEl.innerHTML = `
-                <span class="text-gray-400">Top types:</span>
+                <span class="text-yellow-400 text-xs">📊 Metrics for: ${publisherName}</span>
+                <span class="text-gray-500">|</span>
+                <span class="text-gray-400">Top ecosystem types:</span>
                 ${top3.map(({ type, count }) => `
                     <span class="bg-mcg-accent px-2 py-1 rounded text-white">
                         ${type}: <strong>${this.formatNumber(count)}</strong>
                     </span>
                 `).join('')}
-                <span class="text-gray-500">|</span>
-                <span class="text-gray-400">Total: <strong class="text-white">${this.formatNumber(total)}</strong> ad units</span>
             `;
         } else {
-            // Show selected media type stats
+            // Show selected media type stats with publisher context
             const selectedCount = parseInt(mediaTypes[selected]) || 0;
             const percentage = total > 0 ? ((selectedCount / total) * 100).toFixed(1) : 0;
             const color = this.getMediaTypeColor(selected);
             
             statsEl.innerHTML = `
+                <span class="text-yellow-400 text-xs">📊 Metrics for: ${publisherName}</span>
+                <span class="text-gray-500">|</span>
                 <span class="flex items-center gap-2">
                     <span class="w-3 h-3 rounded-full" style="background-color: ${color}"></span>
                     <span class="text-white font-semibold capitalize">${selected}</span>
                 </span>
-                <span class="text-gray-400">Ad Units: <strong class="text-white">${this.formatNumber(selectedCount)}</strong></span>
-                <span class="text-gray-400">Share: <strong class="text-mcg-blue">${percentage}%</strong> of total</span>
-                <span class="text-gray-500">|</span>
-                <span class="text-gray-400">Total Ecosystem: <strong class="text-white">${this.formatNumber(total)}</strong></span>
+                <span class="text-gray-400">Ecosystem Volume: <strong class="text-white">${this.formatNumber(selectedCount)}</strong></span>
+                <span class="text-gray-400">Share: <strong class="text-mcg-blue">${percentage}%</strong></span>
             `;
         }
     },
@@ -179,6 +181,7 @@ const Dashboard = {
     onMediaTypeFilterChange(mediaType) {
         this.selectedMediaType = mediaType;
         this.renderMediaTypeStats();
+        this.renderEcosystemStats(); // Update ecosystem overview with media type volumes
         this.renderCharts();
     },
 
@@ -239,6 +242,27 @@ const Dashboard = {
         document.getElementById('ecosystemDate').textContent = 
             ecosystem.date ? `Data from ${ecosystem.date}` : '--';
         
+        const selected = this.selectedMediaType;
+        const mediaTypes = ecosystem.pbjs_ad_unit_media_types || {};
+        
+        // Filter out technical types
+        const technicalTypes = ['pos', 'write', 'bidders', 'writeln', 'ortb2Imp', 'platform', 'nativeTheme', 'querySelector', 'getElementById', 'getElementsByTagName'];
+        
+        // Calculate media type specific data for ecosystem overview
+        let mediaTypeVolumeHtml = '';
+        if (selected !== 'all' && mediaTypes[selected]) {
+            const selectedCount = parseInt(mediaTypes[selected]) || 0;
+            const color = this.getMediaTypeColor(selected);
+            mediaTypeVolumeHtml = `
+                <div class="ecosystem-stat" style="border-left: 3px solid ${color}; padding-left: 12px;">
+                    <div class="ecosystem-stat-value" style="color: ${color}">${this.formatNumber(selectedCount)}</div>
+                    <div class="ecosystem-stat-label capitalize">${selected} Ad Units</div>
+                    <div class="text-xs text-gray-500">(All Publishers)</div>
+                </div>
+            `;
+        }
+        
+        // Base ecosystem stats
         const stats = [
             { label: 'Ad Systems', value: ecosystem.known_adsystems },
             { label: 'Global GPIDs', value: ecosystem.global_gpids },
@@ -248,12 +272,21 @@ const Dashboard = {
             { label: 'Avg User Modules', value: ecosystem.avg_user_modules_deployed }
         ];
         
-        grid.innerHTML = stats.map(stat => `
+        // Add Avg Ads In View from ecosystem if available (using avg_audience_providers_deployed as proxy)
+        // Note: ecosystem doesn't have avg_ads_in_view, so we show a relevant ecosystem-wide metric
+        const avgAdsInViewStat = `
+            <div class="ecosystem-stat">
+                <div class="ecosystem-stat-value">${this.formatNumber(ecosystem.avg_audience_providers_deployed || 0)}</div>
+                <div class="ecosystem-stat-label">Avg Audience Providers</div>
+            </div>
+        `;
+        
+        grid.innerHTML = mediaTypeVolumeHtml + stats.map(stat => `
             <div class="ecosystem-stat">
                 <div class="ecosystem-stat-value">${this.formatNumber(stat.value)}</div>
                 <div class="ecosystem-stat-label">${stat.label}</div>
             </div>
-        `).join('');
+        `).join('') + avgAdsInViewStat;
     },
     
     /**
