@@ -7,6 +7,9 @@ const Dashboard = {
     // Store current data
     data: null,
     
+    // Selected media type filter
+    selectedMediaType: 'all',
+    
     // Pagination state
     pagination: {
         adSystems: { page: 0, filtered: [] },
@@ -25,6 +28,7 @@ const Dashboard = {
         // Sort prebid modules by detection count initially
         this.pagination.prebidModules.filtered.sort((a, b) => b.detected_count - a.detected_count);
         
+        this.renderMediaTypeFilter();
         this.render();
         this.setupEventListeners();
     },
@@ -34,6 +38,7 @@ const Dashboard = {
      */
     render() {
         this.renderPublisherBanner();
+        this.renderMediaTypeStats();
         this.renderMetricsCards();
         this.renderEcosystemStats();
         this.renderAdSystemsTable();
@@ -74,6 +79,109 @@ const Dashboard = {
         }
     },
     
+    /**
+     * Render media type filter dropdown
+     */
+    renderMediaTypeFilter() {
+        const ecosystem = this.data?.ecosystem;
+        const select = document.getElementById('mediaTypeFilter');
+        if (!select || !ecosystem?.pbjs_ad_unit_media_types) return;
+        
+        const mediaTypes = ecosystem.pbjs_ad_unit_media_types;
+        
+        // Filter out technical/internal keys and sort by count
+        const technicalTypes = ['pos', 'write', 'bidders', 'writeln', 'ortb2Imp', 'platform', 'nativeTheme', 'querySelector', 'getElementById', 'getElementsByTagName'];
+        
+        const entries = Object.entries(mediaTypes)
+            .filter(([type]) => !technicalTypes.includes(type))
+            .map(([type, count]) => ({ type, count: parseInt(count) || 0 }))
+            .filter(e => e.count > 0)
+            .sort((a, b) => b.count - a.count);
+        
+        // Build options
+        select.innerHTML = '<option value="all">All Media Types</option>';
+        entries.forEach(({ type, count }) => {
+            const option = document.createElement('option');
+            option.value = type;
+            option.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} (${this.formatNumber(count)})`;
+            select.appendChild(option);
+        });
+    },
+    
+    /**
+     * Render media type stats display
+     */
+    renderMediaTypeStats() {
+        const ecosystem = this.data?.ecosystem;
+        const statsEl = document.getElementById('mediaTypeStats');
+        if (!statsEl || !ecosystem?.pbjs_ad_unit_media_types) return;
+        
+        const mediaTypes = ecosystem.pbjs_ad_unit_media_types;
+        const selected = this.selectedMediaType;
+        
+        // Filter out technical types for total calculation
+        const technicalTypes = ['pos', 'write', 'bidders', 'writeln', 'ortb2Imp', 'platform', 'nativeTheme', 'querySelector', 'getElementById', 'getElementsByTagName'];
+        const primaryTypes = Object.entries(mediaTypes)
+            .filter(([type]) => !technicalTypes.includes(type))
+            .map(([type, count]) => ({ type, count: parseInt(count) || 0 }));
+        
+        const total = primaryTypes.reduce((sum, e) => sum + e.count, 0);
+        
+        if (selected === 'all') {
+            // Show summary of top 3 media types
+            const top3 = primaryTypes.sort((a, b) => b.count - a.count).slice(0, 3);
+            statsEl.innerHTML = `
+                <span class="text-gray-400">Top types:</span>
+                ${top3.map(({ type, count }) => `
+                    <span class="bg-mcg-accent px-2 py-1 rounded text-white">
+                        ${type}: <strong>${this.formatNumber(count)}</strong>
+                    </span>
+                `).join('')}
+                <span class="text-gray-500">|</span>
+                <span class="text-gray-400">Total: <strong class="text-white">${this.formatNumber(total)}</strong> ad units</span>
+            `;
+        } else {
+            // Show selected media type stats
+            const selectedCount = parseInt(mediaTypes[selected]) || 0;
+            const percentage = total > 0 ? ((selectedCount / total) * 100).toFixed(1) : 0;
+            const color = this.getMediaTypeColor(selected);
+            
+            statsEl.innerHTML = `
+                <span class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full" style="background-color: ${color}"></span>
+                    <span class="text-white font-semibold capitalize">${selected}</span>
+                </span>
+                <span class="text-gray-400">Ad Units: <strong class="text-white">${this.formatNumber(selectedCount)}</strong></span>
+                <span class="text-gray-400">Share: <strong class="text-mcg-blue">${percentage}%</strong> of total</span>
+                <span class="text-gray-500">|</span>
+                <span class="text-gray-400">Total Ecosystem: <strong class="text-white">${this.formatNumber(total)}</strong></span>
+            `;
+        }
+    },
+    
+    /**
+     * Get color for media type
+     */
+    getMediaTypeColor(type) {
+        const colors = {
+            banner: '#0078D4',
+            video: '#10b981',
+            native: '#f59e0b',
+            slider: '#8b5cf6',
+            display: '#ec4899'
+        };
+        return colors[type?.toLowerCase()] || '#6b7280';
+    },
+    
+    /**
+     * Handle media type filter change
+     */
+    onMediaTypeFilterChange(mediaType) {
+        this.selectedMediaType = mediaType;
+        this.renderMediaTypeStats();
+        this.renderCharts();
+    },
+
     /**
      * Render key metrics cards
      */
@@ -262,14 +370,22 @@ const Dashboard = {
         // Prebid versions chart
         Charts.renderPrebidVersionsChart(ecosystem?.pbjs_major_versions);
         
-        // Media types chart
-        Charts.renderMediaTypesChart(ecosystem?.pbjs_ad_unit_media_types);
+        // Media types chart - pass selected filter
+        Charts.renderMediaTypesChart(ecosystem?.pbjs_ad_unit_media_types, this.selectedMediaType);
     },
     
     /**
      * Setup event listeners
      */
     setupEventListeners() {
+        // Media type filter
+        const mediaTypeFilter = document.getElementById('mediaTypeFilter');
+        if (mediaTypeFilter) {
+            mediaTypeFilter.addEventListener('change', (e) => {
+                this.onMediaTypeFilterChange(e.target.value);
+            });
+        }
+        
         // Ad systems search
         const adSystemSearch = document.getElementById('adSystemSearch');
         if (adSystemSearch) {

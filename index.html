@@ -106,6 +106,22 @@
                 </div>
             </section>
 
+            <!-- Media Type Filter -->
+            <section class="bg-mcg-card rounded-xl p-4 border border-mcg-accent">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <label for="mediaTypeFilter" class="text-sm font-medium text-gray-300">Filter by Media Type:</label>
+                        <select id="mediaTypeFilter" class="bg-mcg-dark border border-mcg-accent rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-mcg-blue min-w-[180px]">
+                            <option value="all">All Media Types</option>
+                            <!-- Options populated dynamically -->
+                        </select>
+                    </div>
+                    <div id="mediaTypeStats" class="flex items-center gap-4 text-sm">
+                        <!-- Stats populated dynamically -->
+                    </div>
+                </div>
+            </section>
+
             <!-- Key Metrics Cards -->
             <section>
                 <div class="flex items-center justify-between mb-4">
