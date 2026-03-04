@@ -124,44 +124,28 @@ const Dashboard = {
      */
     renderEcosystemStats() {
         const ecosystem = this.data?.ecosystem;
-        const publisher = this.data?.publisher;
         const grid = document.getElementById('ecosystemGrid');
         if (!grid || !ecosystem) return;
-
+        
         // Update date
-        document.getElementById('ecosystemDate').textContent =
-            ecosystem.date ? Data from ${ecosystem.date} : '--';
-
+        document.getElementById('ecosystemDate').textContent = 
+            ecosystem.date ? `Data from ${ecosystem.date}` : '--';
+        
         const stats = [
             { label: 'Ad Systems', value: ecosystem.known_adsystems },
             { label: 'Global GPIDs', value: ecosystem.global_gpids },
             { label: 'Ecosystem Size', value: ecosystem.sincera_ecosystem_size },
             { label: 'Pubs w/ GPID', value: ecosystem.pubs_with_gpid },
             { label: 'Video Plcmt Pubs', value: ecosystem.video_plcmt_pubs },
-            { label: 'Avg User Modules', value: ecosystem.avg_user_modules_deployed },
-            { label: 'Avg Page Weight', value: publisher?.avg_page_weight, format: 'mb' },
-            { label: 'Avg CPU Usage', value: publisher?.avg_cpu, format: 'seconds' },
-            { label: 'Avg Ads In View', value: publisher?.avg_ads_in_view, format: 'decimal' }
+            { label: 'Avg User Modules', value: ecosystem.avg_user_modules_deployed }
         ];
-
-        grid.innerHTML = stats.map(stat => {
-            let formattedValue;
-            if (stat.format === 'mb') {
-                formattedValue = stat.value != null ? ${stat.value.toFixed(2)} MB : '--';
-            } else if (stat.format === 'seconds') {
-                formattedValue = stat.value != null ? ${stat.value.toFixed(2)}s : '--';
-            } else if (stat.format === 'decimal') {
-                formattedValue = stat.value != null ? stat.value.toFixed(2) : '--';
-            } else {
-                formattedValue = this.formatNumber(stat.value);
-            }
-            return `
-                <div class="ecosystem-stat">
-                    <div class="ecosystem-stat-value">${formattedValue}</div>
-                    <div class="ecosystem-stat-label">${stat.label}</div>
-                </div>
-            `;
-        }).join('');
+        
+        grid.innerHTML = stats.map(stat => `
+            <div class="ecosystem-stat">
+                <div class="ecosystem-stat-value">${this.formatNumber(stat.value)}</div>
+                <div class="ecosystem-stat-label">${stat.label}</div>
+            </div>
+        `).join('');
     },
     
     /**
