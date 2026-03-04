@@ -6,10 +6,9 @@
 const CONFIG = {
     // API Configuration
     api: {
-        // Use /api routes (works with both local proxy and Vercel serverless)
-        baseUrl: '/api',
-        // Token is handled by the server/serverless function
-        token: null,
+        // Call OpenSincera API directly
+        baseUrl: 'https://open.sincera.io/api',
+        token: 'c54dc3e17898500ecab43e76ba24bf',
         publisherId: 34732,
         
         // Endpoints

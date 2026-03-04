@@ -27,11 +27,18 @@ const API = {
         console.log('API Request:', url);
         
         try {
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            
+            // Add auth token if configured
+            if (CONFIG.api.token) {
+                headers['Authorization'] = `Bearer ${CONFIG.api.token}`;
+            }
+            
             const response = await fetch(url, {
                 method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+                headers: headers
             });
             
             if (!response.ok) {
