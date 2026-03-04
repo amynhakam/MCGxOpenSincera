@@ -390,7 +390,6 @@ const Charts = {
         };
         return colors[type?.toLowerCase()] || '#6b7280';
     },
-    },
     
     /**
      * Helper: Format large numbers
