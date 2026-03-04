@@ -264,9 +264,8 @@ const Charts = {
     /**
      * Create or update media types chart
      * @param {Object} mediaTypesData - Ad unit media types data
-     * @param {string} selectedType - Selected media type filter ('all' or specific type)
      */
-    renderMediaTypesChart(mediaTypesData, selectedType = 'all') {
+    renderMediaTypesChart(mediaTypesData) {
         const ctx = document.getElementById('mediaTypesChart');
         if (!ctx) return;
         
@@ -274,44 +273,22 @@ const Charts = {
             this.instances.mediaTypes.destroy();
         }
         
-        // Filter out technical types
-        const technicalTypes = ['pos', 'write', 'bidders', 'writeln', 'ortb2Imp', 'platform', 'nativeTheme', 'querySelector', 'getElementById', 'getElementsByTagName'];
-        
         let labels = [];
         let data = [];
-        let backgroundColors = [];
         
         if (mediaTypesData && typeof mediaTypesData === 'object') {
-            let entries = Object.entries(mediaTypesData)
-                .filter(([key]) => !technicalTypes.includes(key))
-                .map(([type, count]) => ({ type, count: parseInt(count) || 0 }))
-                .filter(e => e.count > 0)
-                .sort((a, b) => b.count - a.count);
+            const entries = Object.entries(mediaTypesData)
+                .filter(([key]) => !key.includes('_'))
+                .sort((a, b) => parseInt(b[1]) - parseInt(a[1]));
             
-            // If a specific type is selected, highlight it
-            if (selectedType !== 'all') {
-                entries = entries.map(e => ({
-                    ...e,
-                    highlighted: e.type === selectedType
-                }));
-            }
-            
-            labels = entries.map(e => this.formatMediaType(e.type));
-            data = entries.map(e => e.count);
-            backgroundColors = entries.map((e, i) => {
-                if (selectedType === 'all') {
-                    return CONFIG.dashboard.colors.chartPalette[i % CONFIG.dashboard.colors.chartPalette.length];
-                }
-                // Highlight selected, dim others
-                return e.highlighted ? this.getMediaTypeColor(e.type) : 'rgba(100, 100, 100, 0.3)';
-            });
+            labels = entries.map(([type]) => this.formatMediaType(type));
+            data = entries.map(([, count]) => parseInt(count));
         }
         
         // Default data
         if (labels.length === 0) {
             labels = ['Banner', 'Video', 'Native', 'Slider'];
             data = [48000000, 20000000, 2000000, 10000];
-            backgroundColors = CONFIG.dashboard.colors.chartPalette.slice(0, 4);
         }
         
         this.instances.mediaTypes = new Chart(ctx, {
@@ -321,7 +298,7 @@ const Charts = {
                 datasets: [{
                     label: 'Ad Units',
                     data: data,
-                    backgroundColor: backgroundColors,
+                    backgroundColor: CONFIG.dashboard.colors.chartPalette,
                     borderRadius: 4
                 }]
             },
@@ -375,20 +352,6 @@ const Charts = {
      */
     formatMediaType(type) {
         return type.charAt(0).toUpperCase() + type.slice(1);
-    },
-    
-    /**
-     * Helper: Get color for media type
-     */
-    getMediaTypeColor(type) {
-        const colors = {
-            banner: '#0078D4',
-            video: '#10b981',
-            native: '#f59e0b',
-            slider: '#8b5cf6',
-            display: '#ec4899'
-        };
-        return colors[type?.toLowerCase()] || '#6b7280';
     },
     
     /**

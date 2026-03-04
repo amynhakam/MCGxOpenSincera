@@ -7,9 +7,6 @@ const Dashboard = {
     // Store current data
     data: null,
     
-    // Selected media type filter
-    selectedMediaType: 'all',
-    
     // Pagination state
     pagination: {
         adSystems: { page: 0, filtered: [] },
@@ -28,7 +25,6 @@ const Dashboard = {
         // Sort prebid modules by detection count initially
         this.pagination.prebidModules.filtered.sort((a, b) => b.detected_count - a.detected_count);
         
-        this.renderMediaTypeFilter();
         this.render();
         this.setupEventListeners();
     },
@@ -38,7 +34,6 @@ const Dashboard = {
      */
     render() {
         this.renderPublisherBanner();
-        this.renderMediaTypeStats();
         this.renderMetricsCards();
         this.renderEcosystemStats();
         this.renderAdSystemsTable();
@@ -79,112 +74,6 @@ const Dashboard = {
         }
     },
     
-    /**
-     * Render media type filter dropdown
-     */
-    renderMediaTypeFilter() {
-        const ecosystem = this.data?.ecosystem;
-        const select = document.getElementById('mediaTypeFilter');
-        if (!select || !ecosystem?.pbjs_ad_unit_media_types) return;
-        
-        const mediaTypes = ecosystem.pbjs_ad_unit_media_types;
-        
-        // Filter out technical/internal keys and sort by count
-        const technicalTypes = ['pos', 'write', 'bidders', 'writeln', 'ortb2Imp', 'platform', 'nativeTheme', 'querySelector', 'getElementById', 'getElementsByTagName'];
-        
-        const entries = Object.entries(mediaTypes)
-            .filter(([type]) => !technicalTypes.includes(type))
-            .map(([type, count]) => ({ type, count: parseInt(count) || 0 }))
-            .filter(e => e.count > 0)
-            .sort((a, b) => b.count - a.count);
-        
-        // Build options
-        select.innerHTML = '<option value="all">All Media Types</option>';
-        entries.forEach(({ type, count }) => {
-            const option = document.createElement('option');
-            option.value = type;
-            option.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} (${this.formatNumber(count)})`;
-            select.appendChild(option);
-        });
-    },
-    
-    /**
-     * Render media type stats display
-     */
-    renderMediaTypeStats() {
-        const ecosystem = this.data?.ecosystem;
-        const publisher = this.data?.publisher;
-        const statsEl = document.getElementById('mediaTypeStats');
-        if (!statsEl || !ecosystem?.pbjs_ad_unit_media_types) return;
-        
-        const mediaTypes = ecosystem.pbjs_ad_unit_media_types;
-        const selected = this.selectedMediaType;
-        const publisherName = publisher?.name || 'Publisher 34732';
-        
-        // Filter out technical types for total calculation
-        const technicalTypes = ['pos', 'write', 'bidders', 'writeln', 'ortb2Imp', 'platform', 'nativeTheme', 'querySelector', 'getElementById', 'getElementsByTagName'];
-        const primaryTypes = Object.entries(mediaTypes)
-            .filter(([type]) => !technicalTypes.includes(type))
-            .map(([type, count]) => ({ type, count: parseInt(count) || 0 }));
-        
-        const total = primaryTypes.reduce((sum, e) => sum + e.count, 0);
-        
-        if (selected === 'all') {
-            // Show summary - metrics below are for publisher 34732
-            const top3 = primaryTypes.sort((a, b) => b.count - a.count).slice(0, 3);
-            statsEl.innerHTML = `
-                <span class="text-yellow-400 text-xs">📊 Metrics for: ${publisherName}</span>
-                <span class="text-gray-500">|</span>
-                <span class="text-gray-400">Top ecosystem types:</span>
-                ${top3.map(({ type, count }) => `
-                    <span class="bg-mcg-accent px-2 py-1 rounded text-white">
-                        ${type}: <strong>${this.formatNumber(count)}</strong>
-                    </span>
-                `).join('')}
-            `;
-        } else {
-            // Show selected media type stats with publisher context
-            const selectedCount = parseInt(mediaTypes[selected]) || 0;
-            const percentage = total > 0 ? ((selectedCount / total) * 100).toFixed(1) : 0;
-            const color = this.getMediaTypeColor(selected);
-            
-            statsEl.innerHTML = `
-                <span class="text-yellow-400 text-xs">📊 Metrics for: ${publisherName}</span>
-                <span class="text-gray-500">|</span>
-                <span class="flex items-center gap-2">
-                    <span class="w-3 h-3 rounded-full" style="background-color: ${color}"></span>
-                    <span class="text-white font-semibold capitalize">${selected}</span>
-                </span>
-                <span class="text-gray-400">Ecosystem Volume: <strong class="text-white">${this.formatNumber(selectedCount)}</strong></span>
-                <span class="text-gray-400">Share: <strong class="text-mcg-blue">${percentage}%</strong></span>
-            `;
-        }
-    },
-    
-    /**
-     * Get color for media type
-     */
-    getMediaTypeColor(type) {
-        const colors = {
-            banner: '#0078D4',
-            video: '#10b981',
-            native: '#f59e0b',
-            slider: '#8b5cf6',
-            display: '#ec4899'
-        };
-        return colors[type?.toLowerCase()] || '#6b7280';
-    },
-    
-    /**
-     * Handle media type filter change
-     */
-    onMediaTypeFilterChange(mediaType) {
-        this.selectedMediaType = mediaType;
-        this.renderMediaTypeStats();
-        this.renderEcosystemStats(); // Update ecosystem overview with media type volumes
-        this.renderCharts();
-    },
-
     /**
      * Render key metrics cards
      */
@@ -242,27 +131,6 @@ const Dashboard = {
         document.getElementById('ecosystemDate').textContent = 
             ecosystem.date ? `Data from ${ecosystem.date}` : '--';
         
-        const selected = this.selectedMediaType;
-        const mediaTypes = ecosystem.pbjs_ad_unit_media_types || {};
-        
-        // Filter out technical types
-        const technicalTypes = ['pos', 'write', 'bidders', 'writeln', 'ortb2Imp', 'platform', 'nativeTheme', 'querySelector', 'getElementById', 'getElementsByTagName'];
-        
-        // Calculate media type specific data for ecosystem overview
-        let mediaTypeVolumeHtml = '';
-        if (selected !== 'all' && mediaTypes[selected]) {
-            const selectedCount = parseInt(mediaTypes[selected]) || 0;
-            const color = this.getMediaTypeColor(selected);
-            mediaTypeVolumeHtml = `
-                <div class="ecosystem-stat" style="border-left: 3px solid ${color}; padding-left: 12px;">
-                    <div class="ecosystem-stat-value" style="color: ${color}">${this.formatNumber(selectedCount)}</div>
-                    <div class="ecosystem-stat-label capitalize">${selected} Ad Units</div>
-                    <div class="text-xs text-gray-500">(All Publishers)</div>
-                </div>
-            `;
-        }
-        
-        // Base ecosystem stats
         const stats = [
             { label: 'Ad Systems', value: ecosystem.known_adsystems },
             { label: 'Global GPIDs', value: ecosystem.global_gpids },
@@ -272,21 +140,12 @@ const Dashboard = {
             { label: 'Avg User Modules', value: ecosystem.avg_user_modules_deployed }
         ];
         
-        // Add Avg Ads In View from ecosystem if available (using avg_audience_providers_deployed as proxy)
-        // Note: ecosystem doesn't have avg_ads_in_view, so we show a relevant ecosystem-wide metric
-        const avgAdsInViewStat = `
-            <div class="ecosystem-stat">
-                <div class="ecosystem-stat-value">${this.formatNumber(ecosystem.avg_audience_providers_deployed || 0)}</div>
-                <div class="ecosystem-stat-label">Avg Audience Providers</div>
-            </div>
-        `;
-        
-        grid.innerHTML = mediaTypeVolumeHtml + stats.map(stat => `
+        grid.innerHTML = stats.map(stat => `
             <div class="ecosystem-stat">
                 <div class="ecosystem-stat-value">${this.formatNumber(stat.value)}</div>
                 <div class="ecosystem-stat-label">${stat.label}</div>
             </div>
-        `).join('') + avgAdsInViewStat;
+        `).join('');
     },
     
     /**
@@ -403,22 +262,14 @@ const Dashboard = {
         // Prebid versions chart
         Charts.renderPrebidVersionsChart(ecosystem?.pbjs_major_versions);
         
-        // Media types chart - pass selected filter
-        Charts.renderMediaTypesChart(ecosystem?.pbjs_ad_unit_media_types, this.selectedMediaType);
+        // Media types chart
+        Charts.renderMediaTypesChart(ecosystem?.pbjs_ad_unit_media_types);
     },
     
     /**
      * Setup event listeners
      */
     setupEventListeners() {
-        // Media type filter
-        const mediaTypeFilter = document.getElementById('mediaTypeFilter');
-        if (mediaTypeFilter) {
-            mediaTypeFilter.addEventListener('change', (e) => {
-                this.onMediaTypeFilterChange(e.target.value);
-            });
-        }
-        
         // Ad systems search
         const adSystemSearch = document.getElementById('adSystemSearch');
         if (adSystemSearch) {
@@ -569,14 +420,14 @@ const Dashboard = {
      * Calculate trend compared to benchmark
      */
     calculateTrend(value, benchmark, metricKey) {
-        if (!benchmark || value === undefined || value === null) {
+        if (!benchmark || value === undefined) {
             return { html: '' };
         }
         
-        // For some metrics, lower is better (page weight, cpu usage)
+        // For some metrics, lower is better
         const lowerIsBetter = ['avg_page_weight', 'avg_cpu'].includes(metricKey);
         const diff = ((value - benchmark) / benchmark * 100).toFixed(1);
-        const isHigher = value > benchmark;
+        const isPositive = lowerIsBetter ? value < benchmark : value > benchmark;
         
         if (Math.abs(diff) < 5) {
             return {
@@ -584,15 +435,9 @@ const Dashboard = {
             };
         }
         
-        // For lower-is-better metrics: higher = bad (red), lower = good (green)
-        // For other metrics: higher = good (green), lower = bad (red)
-        const isGood = lowerIsBetter ? !isHigher : isHigher;
-        const colorClass = isGood ? 'positive' : 'negative';
-        const arrow = isHigher ? '↑' : '↓';
-        
         return {
-            html: `<span class="metric-trend ${colorClass}">
-                ${arrow} ${Math.abs(diff)}% vs avg
+            html: `<span class="metric-trend ${isPositive ? 'positive' : 'negative'}">
+                ${isPositive ? '↑' : '↓'} ${Math.abs(diff)}% vs avg
             </span>`
         };
     },
