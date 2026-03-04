@@ -536,14 +536,14 @@ const Dashboard = {
      * Calculate trend compared to benchmark
      */
     calculateTrend(value, benchmark, metricKey) {
-        if (!benchmark || value === undefined) {
+        if (!benchmark || value === undefined || value === null) {
             return { html: '' };
         }
         
-        // For some metrics, lower is better
+        // For some metrics, lower is better (page weight, cpu usage)
         const lowerIsBetter = ['avg_page_weight', 'avg_cpu'].includes(metricKey);
         const diff = ((value - benchmark) / benchmark * 100).toFixed(1);
-        const isPositive = lowerIsBetter ? value < benchmark : value > benchmark;
+        const isHigher = value > benchmark;
         
         if (Math.abs(diff) < 5) {
             return {
@@ -551,9 +551,15 @@ const Dashboard = {
             };
         }
         
+        // For lower-is-better metrics: higher = bad (red), lower = good (green)
+        // For other metrics: higher = good (green), lower = bad (red)
+        const isGood = lowerIsBetter ? !isHigher : isHigher;
+        const colorClass = isGood ? 'positive' : 'negative';
+        const arrow = isHigher ? '↑' : '↓';
+        
         return {
-            html: `<span class="metric-trend ${isPositive ? 'positive' : 'negative'}">
-                ${isPositive ? '↑' : '↓'} ${Math.abs(diff)}% vs avg
+            html: `<span class="metric-trend ${colorClass}">
+                ${arrow} ${Math.abs(diff)}% vs avg
             </span>`
         };
     },
