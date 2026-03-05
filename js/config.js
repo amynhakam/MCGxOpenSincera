@@ -60,6 +60,13 @@ const CONFIG = {
     
     // Metric definitions for display
     metrics: {
+        total_ad_units: {
+            label: 'Total Ad Units',
+            description: 'Total number of ad units across all media types',
+            format: 'number',
+            decimals: 0,
+            icon: 'adunit'
+        },
         avg_ads_in_view: {
             label: 'Avg Ads in View',
             description: 'Average number of ads visible in the viewport',

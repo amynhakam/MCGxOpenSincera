@@ -60,19 +60,29 @@ const API = {
     
     /**
      * Get ecosystem data
+     * @param {string} startDate - Optional start date (YYYY-MM-DD)
+     * @param {string} endDate - Optional end date (YYYY-MM-DD)
      * @returns {Promise<Object>} - Ecosystem data
      */
-    async getEcosystem() {
-        return this.request(CONFIG.api.endpoints.ecosystem);
+    async getEcosystem(startDate, endDate) {
+        const params = {};
+        if (startDate) params.start_date = startDate;
+        if (endDate) params.end_date = endDate;
+        return this.request(CONFIG.api.endpoints.ecosystem, params);
     },
     
     /**
      * Get publisher data by ID
      * @param {number} publisherId - Publisher ID
+     * @param {string} startDate - Optional start date (YYYY-MM-DD)
+     * @param {string} endDate - Optional end date (YYYY-MM-DD)
      * @returns {Promise<Object>} - Publisher data
      */
-    async getPublisher(publisherId = CONFIG.api.publisherId) {
-        return this.request(CONFIG.api.endpoints.publishers, { id: publisherId });
+    async getPublisher(publisherId = CONFIG.api.publisherId, startDate, endDate) {
+        const params = { id: publisherId };
+        if (startDate) params.start_date = startDate;
+        if (endDate) params.end_date = endDate;
+        return this.request(CONFIG.api.endpoints.publishers, params);
     },
     
     /**
@@ -93,13 +103,15 @@ const API = {
     
     /**
      * Fetch all dashboard data in parallel
+     * @param {string} startDate - Optional start date (YYYY-MM-DD)
+     * @param {string} endDate - Optional end date (YYYY-MM-DD)
      * @returns {Promise<Object>} - All dashboard data
      */
-    async getAllData() {
+    async getAllData(startDate, endDate) {
         try {
             const [ecosystem, publisher, adSystems, prebidModules] = await Promise.all([
-                this.getEcosystem(),
-                this.getPublisher(),
+                this.getEcosystem(startDate, endDate),
+                this.getPublisher(CONFIG.api.publisherId, startDate, endDate),
                 this.getAdSystems(),
                 this.getPrebidModules()
             ]);
@@ -109,7 +121,8 @@ const API = {
                 publisher,
                 adSystems,
                 prebidModules,
-                fetchedAt: new Date().toISOString()
+                fetchedAt: new Date().toISOString(),
+                dateRange: { startDate, endDate }
             };
         } catch (error) {
             console.error('Failed to fetch all dashboard data:', error);

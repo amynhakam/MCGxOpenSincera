@@ -24,12 +24,15 @@ const App = {
     
     /**
      * Load dashboard data
+     * @param {string} startDate - Optional start date (YYYY-MM-DD)
+     * @param {string} endDate - Optional end date (YYYY-MM-DD)
      */
-    async loadDashboard() {
+    async loadDashboard(startDate, endDate) {
         const loadingState = document.getElementById('loadingState');
         const errorState = document.getElementById('errorState');
         const dashboardContent = document.getElementById('dashboardContent');
         const refreshBtn = document.getElementById('refreshBtn');
+        const applyBtn = document.getElementById('applyDateRange');
         
         try {
             // Show loading state
@@ -41,8 +44,11 @@ const App = {
             const refreshIcon = refreshBtn?.querySelector('svg');
             refreshIcon?.classList.add('refresh-spin');
             
-            // Fetch all data
-            const data = await API.getAllData();
+            // Disable apply button during load
+            if (applyBtn) applyBtn.disabled = true;
+            
+            // Fetch all data with optional date range
+            const data = await API.getAllData(startDate, endDate);
             
             console.log('Dashboard data loaded:', data);
             
@@ -69,6 +75,9 @@ const App = {
             // Remove spin animation
             const refreshIcon = document.getElementById('refreshBtn')?.querySelector('svg');
             refreshIcon?.classList.remove('refresh-spin');
+            
+            // Re-enable apply button
+            if (applyBtn) applyBtn.disabled = false;
         }
     },
     
@@ -78,7 +87,11 @@ const App = {
     setupRefreshButton() {
         const refreshBtn = document.getElementById('refreshBtn');
         if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => this.loadDashboard());
+            refreshBtn.addEventListener('click', () => {
+                // Use current date range from Dashboard if available
+                const { startDate, endDate } = Dashboard.dateRange || {};
+                this.loadDashboard(startDate, endDate);
+            });
         }
     }
 };
