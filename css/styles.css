@@ -1,4 +1,4 @@
-/* MCG OpenSincera Dashboard - Custom Styles */
+/* Zone OpenSincera Dashboard - Custom Styles */
 
 /* Date Input Styling */
 input[type="date"] {
@@ -349,7 +349,7 @@ button:active {
         color: black;
     }
     
-    .bg-mcg-card {
+    .bg-zone-card {
         background: #f3f4f6;
         border: 1px solid #d1d5db;
     }

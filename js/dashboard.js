@@ -7,6 +7,15 @@ const Dashboard = {
     // Store current data
     data: null,
     
+    // Track if event listeners have been set up
+    listenersInitialized: false,
+    
+    // Date range for data filtering
+    dateRange: {
+        startDate: null,
+        endDate: null
+    },
+    
     // Pagination state
     pagination: {
         adSystems: { page: 0, filtered: [] },
@@ -25,8 +34,57 @@ const Dashboard = {
         // Sort prebid modules by detection count initially
         this.pagination.prebidModules.filtered.sort((a, b) => b.detected_count - a.detected_count);
         
+        this.initializeDatePickers();
         this.render();
-        this.setupEventListeners();
+        
+        // Only setup event listeners once
+        if (!this.listenersInitialized) {
+            this.setupEventListeners();
+            this.listenersInitialized = true;
+        }
+    },
+    
+    /**
+     * Initialize date pickers with default values
+     */
+    initializeDatePickers() {
+        const startDateInput = document.getElementById('startDate');
+        const endDateInput = document.getElementById('endDate');
+        
+        if (!startDateInput || !endDateInput) return;
+        
+        // If dates are already set (from a preset or user input), preserve them
+        if (this.dateRange.startDate && this.dateRange.endDate) {
+            startDateInput.value = this.dateRange.startDate;
+            endDateInput.value = this.dateRange.endDate;
+            return;
+        }
+        
+        // Set default date range (last 30 days)
+        const today = new Date();
+        const thirtyDaysAgo = new Date(today);
+        thirtyDaysAgo.setDate(today.getDate() - 30);
+        
+        // Format dates for input
+        const formatDate = (date) => date.toISOString().split('T')[0];
+        
+        // Use ecosystem date if available as the end date
+        if (this.data?.ecosystem?.date) {
+            const ecosystemDate = new Date(this.data.ecosystem.date);
+            endDateInput.value = formatDate(ecosystemDate);
+            
+            // Set start date to 30 days before ecosystem date
+            const startDate = new Date(ecosystemDate);
+            startDate.setDate(ecosystemDate.getDate() - 30);
+            startDateInput.value = formatDate(startDate);
+        } else {
+            endDateInput.value = formatDate(today);
+            startDateInput.value = formatDate(thirtyDaysAgo);
+        }
+        
+        // Store the date range
+        this.dateRange.startDate = startDateInput.value;
+        this.dateRange.endDate = endDateInput.value;
     },
     
     /**
@@ -36,6 +94,7 @@ const Dashboard = {
         this.renderPublisherBanner();
         this.renderMetricsCards();
         this.renderEcosystemStats();
+        this.renderBenchmarks();
         this.renderAdSystemsTable();
         this.renderPrebidModulesTable();
         this.renderCharts();
@@ -100,9 +159,9 @@ const Dashboard = {
             const trend = this.calculateTrend(metric.value, benchmark, metric.key);
             
             return `
-                <div class="metric-card bg-mcg-card rounded-xl p-5 border border-mcg-accent">
+                <div class="metric-card bg-zone-card rounded-xl p-5 border border-zone-accent">
                     <div class="flex items-start justify-between">
-                        <div class="w-10 h-10 rounded-lg bg-mcg-accent flex items-center justify-center text-mcg-blue">
+                        <div class="w-10 h-10 rounded-lg bg-zone-accent flex items-center justify-center text-zone-blue">
                             ${metric.icon}
                         </div>
                         ${trend.html}
@@ -124,6 +183,7 @@ const Dashboard = {
      */
     renderEcosystemStats() {
         const ecosystem = this.data?.ecosystem;
+        const publisher = this.data?.publisher;
         const grid = document.getElementById('ecosystemGrid');
         if (!grid || !ecosystem) return;
         
@@ -137,15 +197,69 @@ const Dashboard = {
             { label: 'Ecosystem Size', value: ecosystem.sincera_ecosystem_size },
             { label: 'Pubs w/ GPID', value: ecosystem.pubs_with_gpid },
             { label: 'Video Plcmt Pubs', value: ecosystem.video_plcmt_pubs },
-            { label: 'Avg User Modules', value: ecosystem.avg_user_modules_deployed }
+            { label: 'Avg User Modules', value: ecosystem.avg_user_modules_deployed },
+            { label: 'Avg Ads In View', value: publisher?.avg_ads_in_view, format: 'decimal' },
+            { label: 'Avg Ad Refresh', value: publisher?.avg_ad_refresh, format: 'seconds' },
+            { label: 'Avg Page Weight', value: publisher?.avg_page_weight, format: 'mb' }
         ];
         
-        grid.innerHTML = stats.map(stat => `
-            <div class="ecosystem-stat">
-                <div class="ecosystem-stat-value">${this.formatNumber(stat.value)}</div>
-                <div class="ecosystem-stat-label">${stat.label}</div>
-            </div>
-        `).join('');
+        grid.innerHTML = stats.map(stat => {
+            let formattedValue;
+            if (stat.format === 'mb') {
+                formattedValue = stat.value != null ? `${stat.value.toFixed(2)} MB` : '--';
+            } else if (stat.format === 'seconds') {
+                formattedValue = stat.value != null ? `${stat.value.toFixed(2)}s` : '--';
+            } else if (stat.format === 'decimal') {
+                formattedValue = stat.value != null ? stat.value.toFixed(2) : '--';
+            } else if (stat.format === 'percentage') {
+                formattedValue = stat.value != null ? `${(stat.value * 100).toFixed(1)}%` : '--';
+            } else {
+                formattedValue = this.formatNumber(stat.value);
+            }
+            return `
+                <div class="ecosystem-stat">
+                    <div class="ecosystem-stat-value">${formattedValue}</div>
+                    <div class="ecosystem-stat-label">${stat.label}</div>
+                </div>
+            `;
+        }).join('');
+    },
+    
+    /**
+     * Render industry benchmarks section
+     */
+    renderBenchmarks() {
+        const grid = document.getElementById('benchmarksGrid');
+        if (!grid) return;
+        
+        const benchmarks = [
+            { key: 'avg_ads_in_view', label: 'Avg Ads in View', value: CONFIG.industryBenchmarks.avg_ads_in_view, format: 'decimal' },
+            { key: 'avg_ad_refresh', label: 'Avg Ad Refresh', value: CONFIG.industryBenchmarks.avg_ad_refresh, format: 'seconds' },
+            { key: 'avg_page_weight', label: 'Avg Page Weight', value: CONFIG.industryBenchmarks.avg_page_weight, format: 'mb' },
+            { key: 'avg_cpu', label: 'Avg CPU Usage', value: CONFIG.industryBenchmarks.avg_cpu, format: 'seconds' },
+            { key: 'id_absorption_rate', label: 'ID Absorption Rate', value: CONFIG.industryBenchmarks.id_absorption_rate, format: 'percentage' }
+        ];
+        
+        grid.innerHTML = benchmarks.map(benchmark => {
+            let formattedValue;
+            if (benchmark.value == null) {
+                formattedValue = '--';
+            } else if (benchmark.format === 'percentage') {
+                formattedValue = (benchmark.value * 100).toFixed(1) + '%';
+            } else if (benchmark.format === 'seconds') {
+                formattedValue = benchmark.value.toFixed(1) + 's';
+            } else if (benchmark.format === 'mb') {
+                formattedValue = benchmark.value.toFixed(2) + ' MB';
+            } else {
+                formattedValue = benchmark.value.toFixed(2);
+            }
+            return `
+                <div class="ecosystem-stat">
+                    <div class="ecosystem-stat-value">${formattedValue}</div>
+                    <div class="ecosystem-stat-label">${benchmark.label}</div>
+                </div>
+            `;
+        }).join('');
     },
     
     /**
@@ -172,7 +286,7 @@ const Dashboard = {
             `;
         } else {
             tbody.innerHTML = pageData.map(system => `
-                <tr class="border-b border-mcg-accent/50">
+                <tr class="border-b border-zone-accent/50">
                     <td class="py-3 px-4">
                         ${system.image?.url 
                             ? `<img src="${system.image.url}" alt="${system.name}" class="ad-system-logo" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%230078D4%22><rect width=%2224%22 height=%2224%22 rx=%224%22/></svg>'">`
@@ -222,7 +336,7 @@ const Dashboard = {
             tbody.innerHTML = pageData.map(module => {
                 const barWidth = ((module.detected_count || 0) / maxDetected * 100).toFixed(1);
                 return `
-                    <tr class="border-b border-mcg-accent/50">
+                    <tr class="border-b border-zone-accent/50">
                         <td class="py-3 px-4 font-medium text-white">${module.module_name || 'Unknown'}</td>
                         <td class="py-3 px-4">
                             <span class="module-category ${module.module_category || 'other'}">${module.module_category || 'other'}</span>
@@ -270,6 +384,60 @@ const Dashboard = {
      * Setup event listeners
      */
     setupEventListeners() {
+        // Date range apply button
+        const applyDateRangeBtn = document.getElementById('applyDateRange');
+        if (applyDateRangeBtn) {
+            applyDateRangeBtn.addEventListener('click', () => {
+                this.onDateRangeChange();
+            });
+        }
+        
+        // Also apply on Enter key in date inputs
+        const startDateInput = document.getElementById('startDate');
+        const endDateInput = document.getElementById('endDate');
+        
+        [startDateInput, endDateInput].forEach(input => {
+            if (input) {
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.onDateRangeChange();
+                    }
+                });
+            }
+        });
+        
+        // Date range presets dropdown
+        const dateRangePresetsBtn = document.getElementById('dateRangePresets');
+        const dateRangeDropdown = document.getElementById('dateRangeDropdown');
+        
+        if (dateRangePresetsBtn && dateRangeDropdown) {
+            // Toggle dropdown on click
+            dateRangePresetsBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const isHidden = dateRangeDropdown.classList.contains('hidden');
+                dateRangeDropdown.classList.toggle('hidden', !isHidden);
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!dateRangePresetsBtn.contains(e.target) && !dateRangeDropdown.contains(e.target)) {
+                    dateRangeDropdown.classList.add('hidden');
+                }
+            });
+            
+            // Handle preset selection
+            dateRangeDropdown.querySelectorAll('button[data-range]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const range = btn.dataset.range;
+                    dateRangeDropdown.classList.add('hidden');
+                    this.applyDatePreset(range);
+                });
+            });
+        }
+        
         // Ad systems search
         const adSystemSearch = document.getElementById('adSystemSearch');
         if (adSystemSearch) {
@@ -376,10 +544,114 @@ const Dashboard = {
      */
     updateTimestamp() {
         const timeEl = document.getElementById('updateTime');
+        const dataDateEl = document.getElementById('dataDate');
+        
         if (timeEl && this.data?.fetchedAt) {
             const date = new Date(this.data.fetchedAt);
-            timeEl.textContent = date.toLocaleString();
+            timeEl.textContent = date.toLocaleTimeString();
         }
+    },
+    
+    /**
+     * Apply a date preset and update the inputs
+     */
+    applyDatePreset(preset) {
+        const startDateInput = document.getElementById('startDate');
+        const endDateInput = document.getElementById('endDate');
+        
+        if (!startDateInput || !endDateInput) return;
+        
+        const today = new Date();
+        const formatDate = (date) => date.toISOString().split('T')[0];
+        
+        let startDate, endDate;
+        
+        switch (preset) {
+            case 'today':
+                startDate = endDate = formatDate(today);
+                break;
+            case 'yesterday':
+                const yesterday = new Date(today);
+                yesterday.setDate(today.getDate() - 1);
+                startDate = endDate = formatDate(yesterday);
+                break;
+            case 'last7days':
+                endDate = formatDate(today);
+                const sevenDaysAgo = new Date(today);
+                sevenDaysAgo.setDate(today.getDate() - 6);
+                startDate = formatDate(sevenDaysAgo);
+                break;
+            case 'monthToDate':
+                endDate = formatDate(today);
+                const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+                startDate = formatDate(firstOfMonth);
+                break;
+            case 'lastMonth':
+                const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+                const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                startDate = formatDate(lastMonthStart);
+                endDate = formatDate(lastMonthEnd);
+                break;
+            default:
+                return;
+        }
+        
+        startDateInput.value = startDate;
+        endDateInput.value = endDate;
+        
+        // Auto-apply the date range
+        this.onDateRangeChange();
+    },
+    
+    /**
+     * Handle date range change
+     */
+    onDateRangeChange() {
+        const startDateInput = document.getElementById('startDate');
+        const endDateInput = document.getElementById('endDate');
+        
+        if (!startDateInput || !endDateInput) return;
+        
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+        
+        // Validate dates
+        if (!startDate || !endDate) {
+            this.showNotification('Please select both start and end dates', 'error');
+            return;
+        }
+        
+        if (new Date(startDate) > new Date(endDate)) {
+            this.showNotification('Start date cannot be after end date', 'error');
+            return;
+        }
+        
+        // Store the date range
+        this.dateRange.startDate = startDate;
+        this.dateRange.endDate = endDate;
+        
+        // Show loading indicator
+        this.showNotification(`Loading data from ${startDate} to ${endDate}...`, 'info');
+        
+        // Reload data with new date range
+        App.loadDashboard(startDate, endDate);
+    },
+    
+    /**
+     * Show a notification toast
+     */
+    showNotification(message, type = 'success') {
+        const toast = document.createElement('div');
+        const bgColor = type === 'error' ? 'bg-red-600' : type === 'info' ? 'bg-zone-blue' : 'bg-green-600';
+        toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-300 ${bgColor} text-white`;
+        toast.textContent = message;
+        
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
     },
     
     /**
@@ -420,15 +692,14 @@ const Dashboard = {
      * Calculate trend compared to benchmark
      */
     calculateTrend(value, benchmark, metricKey) {
-        if (!benchmark || value === undefined) {
+        if (!benchmark || value === undefined || value === null) {
             return { html: '' };
         }
         
-        // For some metrics, lower is better
+        // For some metrics, lower is better (page weight, cpu usage)
         const lowerIsBetter = ['avg_page_weight', 'avg_cpu'].includes(metricKey);
         const diff = ((value - benchmark) / benchmark * 100).toFixed(1);
         const isLower = value < benchmark;
-        const isGood = lowerIsBetter ? isLower : !isLower;
         
         if (Math.abs(diff) < 5) {
             return {
@@ -436,9 +707,17 @@ const Dashboard = {
             };
         }
         
+        // Determine if the result is good or bad
+        // For lower-is-better metrics: being lower = good
+        // For other metrics: being higher = good
+        const isGood = lowerIsBetter ? isLower : !isLower;
+        const colorClass = isGood ? 'positive' : 'negative';
+        // Arrow direction: ↓ when below avg, ↑ when above avg
+        const arrow = isLower ? '↓' : '↑';
+        
         return {
-            html: `<span class="metric-trend ${isGood ? 'positive' : 'negative'}">
-                ${isLower ? '↓' : '↑'} ${Math.abs(diff)}% vs avg
+            html: `<span class="metric-trend ${colorClass}">
+                ${arrow} ${Math.abs(diff)}% vs avg
             </span>`
         };
     },
@@ -455,8 +734,10 @@ const Dashboard = {
             tag: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>`,
             fingerprint: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4"></path></svg>`,
             route: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>`,
-            users: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>`
+            users: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>`,
+            adunit: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>`
         };
         return icons[name] || '';
     }
 };
+

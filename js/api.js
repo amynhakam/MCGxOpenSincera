@@ -1,5 +1,5 @@
 /**
- * MCG OpenSincera Dashboard - API Module
+ * Zone OpenSincera Dashboard - API Module
  * Handles all API communications with OpenSincera
  */
 

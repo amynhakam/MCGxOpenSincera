@@ -1,5 +1,5 @@
 /**
- * MCG OpenSincera Dashboard - Charts Module
+ * Zone OpenSincera Dashboard - Charts Module
  * Handles all Chart.js configurations and rendering
  */
 
@@ -154,7 +154,7 @@ const Charts = {
                 labels: labels,
                 datasets: [
                     {
-                        label: 'MCG (Publisher)',
+                        label: 'Zone (Publisher)',
                         data: publisherValues,
                         backgroundColor: 'rgba(0, 120, 212, 0.2)',
                         borderColor: CONFIG.dashboard.colors.primary,

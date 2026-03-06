@@ -1,5 +1,5 @@
 /**
- * MCG OpenSincera Dashboard - Export Module
+ * Zone OpenSincera Dashboard - Export Module
  * Handles data export to Excel/CSV
  */
 
@@ -115,7 +115,7 @@ const Export = {
             });
         }
         
-        this.toExcel(metrics, 'MCG_Publisher_Metrics', 'Publisher Metrics');
+        this.toExcel(metrics, 'Zone_Publisher_Metrics', 'Publisher Metrics');
     },
     
     /**
@@ -132,7 +132,7 @@ const Export = {
             Description: system.description || 'N/A'
         }));
         
-        this.toExcel(data, 'MCG_Ad_Systems', 'Ad Systems');
+        this.toExcel(data, 'Zone_Ad_Systems', 'Ad Systems');
     },
     
     /**
@@ -150,7 +150,7 @@ const Export = {
             'Detection Count (90 days)': module.detected_count
         }));
         
-        this.toExcel(data, 'MCG_Prebid_Modules', 'Prebid Modules');
+        this.toExcel(data, 'Zone_Prebid_Modules', 'Prebid Modules');
     },
     
     /**
@@ -203,7 +203,7 @@ const Export = {
             }
             
             // Download the workbook
-            XLSX.writeFile(wb, `MCG_OpenSincera_Full_Report_${this.getTimestamp()}.xlsx`);
+            XLSX.writeFile(wb, `Zone_OpenSincera_Full_Report_${this.getTimestamp()}.xlsx`);
             
             this.showNotification('Full report exported successfully!');
         } catch (error) {

@@ -51,12 +51,34 @@
                     </div>
                     <div>
                         <h1 class="text-xl font-bold text-white">MCG OpenSincera Dashboard</h1>
-                        <p class="text-xs text-gray-400">Microsoft Casual Games Ad Tech Analytics</p>
+                        <p class="text-xs text-gray-400">Zone Ad Tech Analytics</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-4">
+                    <!-- Date Range Picker -->
+                    <div class="flex items-center gap-2 text-sm">
+                        <div class="relative">
+                            <button id="dateRangePresets" class="p-1 hover:bg-mcg-accent rounded transition-colors" title="Quick date ranges">
+                                <svg class="w-4 h-4 text-gray-400 hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                            </button>
+                            <div id="dateRangeDropdown" class="hidden absolute left-0 top-full mt-1 bg-mcg-card border border-mcg-accent rounded-lg shadow-lg z-50 min-w-[140px]">
+                                <button data-range="today" class="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-mcg-accent hover:text-white transition-colors rounded-t-lg">Today</button>
+                                <button data-range="yesterday" class="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-mcg-accent hover:text-white transition-colors">Yesterday</button>
+                                <button data-range="last7days" class="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-mcg-accent hover:text-white transition-colors">Last 7 Days</button>
+                                <button data-range="monthToDate" class="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-mcg-accent hover:text-white transition-colors">Month to Date</button>
+                                <button data-range="lastMonth" class="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-mcg-accent hover:text-white transition-colors rounded-b-lg">Last Month</button>
+                            </div>
+                        </div>
+                        <input type="date" id="startDate" class="bg-mcg-dark border border-mcg-accent rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-mcg-blue" title="Start Date">
+                        <span class="text-gray-400">to</span>
+                        <input type="date" id="endDate" class="bg-mcg-dark border border-mcg-accent rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-mcg-blue" title="End Date">
+                        <button id="applyDateRange" class="bg-mcg-accent hover:bg-mcg-blue text-white px-3 py-1.5 rounded-lg text-sm transition-colors">Apply</button>
+                    </div>
+                    <div class="text-sm text-gray-400 hidden sm:block">|</div>
                     <div id="lastUpdated" class="text-sm text-gray-400">
-                        <span class="hidden sm:inline">Last updated: </span>
+                        <span class="hidden sm:inline">Refreshed: </span>
                         <span id="updateTime">--</span>
                     </div>
                     <button id="refreshBtn" class="bg-mcg-blue hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
@@ -141,13 +163,24 @@
                 </div>
             </section>
 
-            <!-- Ecosystem Overview -->
+            <!-- Industry Benchmarks -->
             <section class="bg-mcg-card rounded-xl p-6 border border-mcg-accent">
                 <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-lg font-semibold text-white">Ecosystem Overview</h3>
+                    <h3 class="text-lg font-semibold text-white">Industry Benchmarks</h3>
+                    <span class="text-sm text-gray-400">Used for % vs avg comparisons</span>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4" id="benchmarksGrid">
+                    <!-- Benchmarks will be populated here -->
+                </div>
+            </section>
+
+            <!-- Other Publishers -->
+            <section class="bg-mcg-card rounded-xl p-6 border border-mcg-accent">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold text-white">Other Publishers</h3>
                     <span id="ecosystemDate" class="text-sm text-gray-400">--</span>
                 </div>
-                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4" id="ecosystemGrid">
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-9 gap-4" id="ecosystemGrid">
                     <!-- Ecosystem stats will be populated here -->
                 </div>
             </section>
@@ -224,7 +257,7 @@
 
             <!-- Footer -->
             <footer class="text-center text-gray-500 text-sm py-8 border-t border-mcg-accent">
-                <p>MCG OpenSincera Dashboard &copy; 2026 Microsoft Casual Games</p>
+                <p>MCG OpenSincera Dashboard &copy; 2026 Zone</p>
                 <p class="mt-1">Powered by <a href="https://open.sincera.io" target="_blank" class="text-mcg-blue hover:underline">OpenSincera API</a></p>
             </footer>
         </div>
@@ -239,3 +272,4 @@
     <script src="js/app.js"></script>
 </body>
 </html>
+
